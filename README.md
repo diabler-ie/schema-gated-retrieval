@@ -2,6 +2,11 @@
 
 Fetch large responses to a local cache and return a data profile, letting the agent selectively query the cache for only what it needs.
 
+#### Usage
+```
+Point your coding agent of choice to this repo and ask it to implement this in your MCP server!
+```
+
 ## The Problem
 
 MCP servers that wrap REST APIs often return massive JSON responses. A single API object can be tens of kilobytes when it contains nested objects, embedded arrays, or rich metadata. Listing hundreds of such objects can mean megabytes of data loaded directly into the LLM's context window -- far too much.
@@ -132,3 +137,7 @@ For details on integrating this pattern into your MCP server:
 - **[Cache Design](docs/cache-design.md)** -- cache module interface, profiling algorithm, memory management, and filter support
 - **[Implementation Guide](docs/implementation.md)** -- step-by-step integration, tool schemas, server instructions, and conditional caching
 - **[Prior Art](docs/prior-art.md)** -- detailed comparisons with existing approaches
+
+
+
+##### If you implement this method and it works well for you, consider leaving a star on the repo! :)
