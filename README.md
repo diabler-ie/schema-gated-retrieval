@@ -147,7 +147,3 @@ For details on integrating this pattern into your MCP server:
 - **[Cache Design](docs/cache-design.md)** -- cache module interface, profiling algorithm, memory management, and filter support
 - **[Implementation Guide](docs/implementation.md)** -- step-by-step integration, tool schemas, server instructions, and conditional caching
 - **[Prior Art](docs/prior-art.md)** -- detailed comparisons with existing approaches
-
-
-
-##### If you implement this method and it works well for you, consider leaving a star on the repo! :)
