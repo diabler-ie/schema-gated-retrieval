@@ -1,10 +1,11 @@
 # Informed Retrieval for MCP Servers
 
-A context-budget gate for MCP servers: cache large tool responses and return a schema profile, giving the LLM control over what enters its context window.
+A mechanism for MCP servers that return large responses. Instead of dumping everything into the LLM's context window, return a schema profile and let the LLM choose what to load.
 
 #### Usage
 ```
-Point your coding agent of choice to this repo and ask it to implement this in your MCP server!
+This is a spec, not a library. Point your coding agent to this repo and
+ask it to implement informed retrieval in your MCP server.
 ```
 
 ## The Problem
