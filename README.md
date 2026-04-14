@@ -1,11 +1,11 @@
-# Informed Retrieval for MCP Servers
+# Schema-Gated Retrieval for MCP Servers
 
 A mechanism for MCP servers that return large responses. Instead of dumping everything into the LLM's context window, return a schema profile and let the LLM choose what to load.
 
 #### Usage
 ```
 This is a spec, not a library. Point your coding agent to this repo and
-ask it to implement informed retrieval in your MCP server.
+ask it to implement schema-gated retrieval in your MCP server.
 ```
 
 ## The Problem
@@ -122,7 +122,7 @@ Agent                          MCP Server                    Cache
 | **Proxy sandboxing** ([Context Mode](https://github.com/mksglu/context-mode)) | Intercept all tool output, store externally, retrieve via search | Partially -- retrieves via search, but without a data map |
 | **Memory pointers** ([arXiv](https://arxiv.org/abs/2511.22729)) | Store externally, give LLM opaque references | Partially -- can access data, but doesn't know its shape or cost |
 | **Reactive caching** ([mcp-cache](https://github.com/swapnilsurdi/mcp-cache)) | Cache + keyword/JSONPath search | Partially -- searches, but without a data map |
-| **Informed retrieval** | Cache + schema profile with field types, sizes, and samples | **Yes -- LLM sees the data's shape and cost before loading any of it** |
+| **Schema-gated retrieval** | Cache + schema profile with field types, sizes, and samples | **Yes -- LLM sees the data's shape and cost before loading any of it** |
 
 Every other approach still force-feeds data into context -- they just argue about how much. The profile is the differentiator because it shifts control to the LLM. Instead of the tool deciding what the LLM sees, the LLM gets a structured map of the data -- field types, average sizes, presence rates -- and decides for itself what's worth the context budget. See [Prior Art](docs/prior-art.md) for detailed comparisons.
 
@@ -138,7 +138,7 @@ In production use:
 | Total context consumed (both phases) | ~18 KB |
 | End-to-end context reduction | **99.6%** |
 
-The gate turns a 4.2MB context dump into an 18KB informed retrieval. The full dataset stays available in the cache -- the LLM can always request more fields or different filters without another API call. The LLM sampled before committing context budget, which is the constraint that actually matters.
+The gate turns a 4.2MB context dump into an 18KB schema-gated retrieval. The full dataset stays available in the cache -- the LLM can always request more fields or different filters without another API call. The LLM sampled before committing context budget, which is the constraint that actually matters.
 
 ## Implementation
 

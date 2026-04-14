@@ -34,8 +34,8 @@ Existing approaches to handling large tool responses in MCP servers and agent fr
 
 - **LangChain, LlamaIndex, CrewAI** — Handle large tool outputs via truncation, summarization, or streaming. None implement schema-profiled caching with agent-driven field projection.
 
-## What's Different About Informed Retrieval
+## What's Different About Schema-Gated Retrieval
 
 The fundamental issue is that MCP tool returns are force-fed into the LLM's context — the LLM has no agency over what enters its context window. Existing solutions either sandbox everything (Context Mode), reject oversized responses (size limits), give the LLM opaque pointers (memory pointers), or have the server guess what's relevant (Axiom). None give the LLM a structured map of the data so it can make its own context-budget-aware decisions.
 
-Informed retrieval's schema profile is the differentiator: field types, average sizes, presence rates, and a representative sample — all in ~3KB. The LLM sees the shape and cost of the data before committing any of it to context. It's the difference between searching blind and choosing informed.
+Schema-gated retrieval's schema profile is the differentiator: field types, average sizes, presence rates, and a representative sample — all in ~3KB. The LLM sees the shape and cost of the data before committing any of it to context. It's the difference between searching blind and choosing informed.
