@@ -1,6 +1,6 @@
-# Profile-Guided Retrieval for MCP Servers
+# Informed Retrieval for MCP Servers
 
-Fetch large responses to a local cache and return a data profile, letting the agent selectively query the cache for only what it needs.
+A context-budget gate for MCP servers: cache large tool responses and return a schema profile, giving the LLM control over what enters its context window.
 
 #### Usage
 ```
@@ -9,19 +9,26 @@ Point your coding agent of choice to this repo and ask it to implement this in y
 
 ## The Problem
 
-MCP servers that wrap REST APIs often return massive JSON responses. A single API object can be tens of kilobytes when it contains nested objects, embedded arrays, or rich metadata. Listing hundreds of such objects can mean megabytes of data loaded directly into the LLM's context window -- far too much.
+MCP tool returns are force-fed into the LLM's context. Whatever a tool returns goes directly into the conversation -- the LLM doesn't get to choose. A search returning 10,000 log entries means 500K tokens loaded whether the LLM wants them or not. The LLM has no agency over what enters its context window.
 
-Naive mitigations like truncating the item list until it fits a size cap can result in returning only a handful of items, defeating the purpose of a list operation. Static field projections (hardcoding which fields to return) require the developer to predict what the agent will need, which varies by task.
+This is a fundamental issue with how MCP tools interact with agents. The context window is the scarce resource, and the LLM -- the thing best positioned to know what it needs -- has zero control over what fills it.
+
+Naive mitigations don't solve this:
+- **Truncation** cuts the response to fit, but the LLM still didn't choose what survived.
+- **Static field projections** require the developer to predict what the agent will need, which varies by task.
+- **Pagination** controls how many items, but each page still dumps everything into context.
 
 ## The Solution
 
-Separate data retrieval from data consumption using the profile-guided approach:
+Put a gate between the data and the context window. The cache isn't storage -- it's a mechanism that gives the LLM control over what enters its context.
 
-1. **Fetch + Profile**: The tool fetches the full API response, stores it in a local cache, and returns only a lightweight schema profile (~1-3KB) describing the data's structure, field types, and sizes.
+1. **Fetch + Profile**: The tool fetches the full API response, stores it in a local cache, and returns only a lightweight schema profile (~1-3KB) describing the data's structure, field types, and sizes. This is what enters context -- metadata, not data.
 
-2. **Selective Query**: The agent reads the profile, decides which fields it actually needs for the current task, and queries the cache for just those fields.
+2. **Decide**: The LLM sees the profile -- field names, types, average sizes, presence rates -- and makes an informed decision about what it actually needs. It can see that `attachments` averages 48KB per item and skip it entirely, or that `status` is 60 bytes and cheap to pull.
 
-The key insight is that **the agent -- not the developer -- chooses which fields to retrieve**, and it makes that choice dynamically based on the task at hand. An agent summarizing items needs different fields than one doing deep analysis, even when querying the same API endpoint.
+3. **Selective Query**: The LLM calls `query_cached` with specific fields, filters, and a limit. Only the requested slice enters context.
+
+The key insight is that **the LLM -- not the tool -- controls what enters the context window**. The profile gives it enough information to make context-budget-aware decisions before committing to loading any data. An agent summarizing items needs different fields than one doing deep analysis, even when querying the same API endpoint.
 
 ## How It Works
 
@@ -105,16 +112,18 @@ Agent                          MCP Server                    Cache
 
 ## How Is This Different?
 
-| Approach | How it handles large responses | Agent chooses fields? |
+| Approach | How it handles large responses | LLM controls what enters context? |
 |---|---|---|
-| **Truncation / summarization** | Cut or compress the response to fit | No |
-| **Cursor-based pagination** | Return fewer items per page | No |
-| **Static field projections** | Developer hardcodes which fields to return | No |
-| **Server-side heuristics** | Server scores and selects columns | No |
-| **Reactive caching** (e.g., mcp-cache) | Cache + keyword/JSONPath search | Partially -- searches, but without a data map |
-| **Profile-guided retrieval** | Cache + auto-generated profile with field types, sizes, and samples | **Yes -- informed by the profile** |
+| **Truncation / summarization** | Cut or compress the response to fit | No -- tool decides what survives |
+| **Cursor-based pagination** | Return fewer items per page | No -- each page still dumps everything |
+| **Static field projections** | Developer hardcodes which fields to return | No -- developer decides up front |
+| **Server-side heuristics** | Server scores and selects columns | No -- server guesses what's relevant |
+| **Proxy sandboxing** ([Context Mode](https://github.com/mksglu/context-mode)) | Intercept all tool output, store externally, retrieve via search | Partially -- retrieves via search, but without a data map |
+| **Memory pointers** ([arXiv](https://arxiv.org/abs/2511.22729)) | Store externally, give LLM opaque references | Partially -- can access data, but doesn't know its shape or cost |
+| **Reactive caching** ([mcp-cache](https://github.com/swapnilsurdi/mcp-cache)) | Cache + keyword/JSONPath search | Partially -- searches, but without a data map |
+| **Informed retrieval** | Cache + schema profile with field types, sizes, and samples | **Yes -- LLM sees the data's shape and cost before loading any of it** |
 
-The profile is the differentiator. It gives the agent a structured map of the data -- field types, average sizes, presence rates -- so it can make context-budget-aware decisions about what to retrieve. See [Prior Art](docs/prior-art.md) for detailed comparisons.
+Every other approach still force-feeds data into context -- they just argue about how much. The profile is the differentiator because it shifts control to the LLM. Instead of the tool deciding what the LLM sees, the LLM gets a structured map of the data -- field types, average sizes, presence rates -- and decides for itself what's worth the context budget. See [Prior Art](docs/prior-art.md) for detailed comparisons.
 
 ## Observed Results
 
@@ -128,7 +137,7 @@ In production use:
 | Total context consumed (both phases) | ~18 KB |
 | End-to-end context reduction | **99.6%** |
 
-The pattern turns multi-megabyte API responses into kilobyte-scale context consumption while keeping the full dataset available in the cache -- the agent can always request more fields or different filters without another API call.
+The gate turns a 4.2MB context dump into an 18KB informed retrieval. The full dataset stays available in the cache -- the LLM can always request more fields or different filters without another API call. The LLM sampled before committing context budget, which is the constraint that actually matters.
 
 ## Implementation
 

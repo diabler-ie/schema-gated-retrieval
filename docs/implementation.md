@@ -1,6 +1,6 @@
 # Implementation Guide
 
-How to integrate profile-guided retrieval into an MCP server.
+How to integrate informed retrieval into an MCP server.
 
 ## Step 1: Add the Cache Module
 
